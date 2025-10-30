@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Teacher Attendance – Polygon School</title>
+<style>
+  body { font-family: Arial,sans-serif; background: #f7fbff; margin:0; min-height:100vh; }
+  .container { background: #fff; max-width: 650px; margin:32px auto; border-radius:16px; box-shadow:0 1px 16px #0003; padding:30px; }
+  .logo-wrap {
+    display:flex; justify-content:center; align-items:center; margin-bottom:20px;
+  }
+  .logo-circle {
+    background:#fff;
+    border-radius:50%;
+    box-shadow:0 2px 8px #00339644;
+    width:140px; height:140px;
+    display:flex; align-items:center; justify-content:center;
+    padding:10px; 
+  }
+  .logo-circle img { width:120px; height:120px; border-radius:50%; }
+  h2,h3 { color: #114c98; text-align: center; margin-top:0; }
+  label, select, input { display:block; margin:6px 0; font-size:1rem; }
+  button { margin:6px 9px 6px 0; padding:5px 15px; background:#114c98; color:#fff; font-weight:600; border:0; border-radius:5px; cursor:pointer;}
+  button:hover { background:#156ddf;}
+  table { width:100%; border-collapse:collapse; margin-top:12px;}
+  th,td { border:1px solid #dde8f7; padding:7px; text-align:left;}
+  th { background:#e7f2fb; color:#184a80;}
+  #login, #attendance { display:none; }
+  input[type="text"],input[type="password"],input[type="number"] { width:95%;padding:6px; border:1px solid #cee5fc; border-radius:6px;}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo-wrap">
+    <div class="logo-circle">
+      <img src="ChatGPT-Image-Oct-30-2025-12_48_35-PM.jpg" alt="Polygon Senior Secondary School Logo">
+    </div>
+  </div>
+  <h2>Polygon Senior Secondary School</h2>
+
+  <div id="login">
+    <h3>Teacher Login</h3>
+    <label>ID: <input id="teacherId" type="text" /></label>
+    <label>Password: <input id="teacherPass" type="password" /></label>
+    <button onclick="login()">Login</button>
+    <p id="loginMessage" style="color:red;"></p>
+  </div>
+
+  <div id="attendance">
+    <h3>Attendance Panel</h3>
+    <label>
+      Class:
+      <select id="classSelect" onchange="loadStreams()">
+        <option value="">Select Class</option>
+        <option value="11">11</option>
+        <option value="12">12</option>
+      </select>
+    </label>
+    <label>
+      Stream:
+      <select id="streamSelect" onchange="loadSections()" disabled>
+        <option value="">Select Stream</option>
+        <option value="Arts">Arts</option>
+        <option value="Science">Science</option>
+      </select>
+    </label>
+    <label>
+      Section:
+      <select id="sectionSelect" onchange="loadStudents()" disabled>
+        <option value="">Select Section</option>
+        <option value="A">A</option>
+        <option value="B">B</option>
+      </select>
+    </label>
+
+    <h4 style="margin-bottom:4px;color:#156ddf;">Add Student</h4>
+    <label>Name: <input id="studentName" type="text"/></label>
+    <label>Roll No: <input id="rollNo" type="number" /></label>
+    <label>Parent Number: <input id="parentNo" type="text" /></label>
+    <button onclick="addStudent()">Add Student</button>
+
+    <h4 style="margin-bottom:4px;margin-top:22px;color:#156ddf;">Student List & Attendance</h4>
+    <table id="studentTable">
+      <thead><tr><th>Roll No</th><th>Name</th><th>Parent Number</th><th>Status</th><th>Remove</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button onclick="submitAttendance()">Submit Attendance</button>
+    <p id="attMsg" style="color:green;"></p>
+  </div>
+</div>
+
+<script>
+const teacherID = "30102025";
+const teacherPass = "polygon";
+// Store and load student data in browser localStorage
+function getKey() {
+  let cls = document.getElementById("classSelect").value;
+  let stream = document.getElementById("streamSelect").value;
+  let section = document.getElementById("sectionSelect").value;
+  return `${cls}-${stream}-${section}`;
+}
+function loadFromStorage() {
+  let all = localStorage.getItem("polygon_students");
+  return all ? JSON.parse(all) : {};
+}
+function saveToStorage(obj) {
+  localStorage.setItem("polygon_students", JSON.stringify(obj));
+}
+function showLogin() {
+  document.getElementById("login").style.display = "block";
+  document.getElementById("attendance").style.display = "none";
+}
+showLogin();
+function login() {
+  const id = document.getElementById("teacherId").value.trim();
+  const pass = document.getElementById("teacherPass").value;
+  if(id === teacherID && pass === teacherPass) {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("attendance").style.display = "block";
+    loadStreams();
+  } else {
+    document.getElementById("loginMessage").innerText = "Invalid ID or Password";
+  }
+}
+function loadStreams() {
+  let cls = document.getElementById("classSelect").value;
+  document.getElementById("streamSelect").disabled = cls === "";
+  document.getElementById("sectionSelect").disabled = true;
+  clearStudentsTable();
+}
+function loadSections() {
+  let stream = document.getElementById("streamSelect").value;
+  document.getElementById("sectionSelect").disabled = stream === "";
+  clearStudentsTable();
+}
+function loadStudents() {
+  let key = getKey();
+  if(key.includes("undefined") || key.includes("--")) return;
+  let allData = loadFromStorage();
+  if(!allData[key]) allData[key] = [];
+  updateStudentsTable(allData[key]);
+}
+function updateStudentsTable(students) {
+  let tbody = document.querySelector("#studentTable tbody");  
+  tbody.innerHTML = "";
+  students.forEach((s, i) => {
+    let tr = document.createElement("tr");
+    let attBtns = s.status === "Absent" ? 
+      `<button style="background: #ef3535" disabled>Absent</button>` : 
+      `<button onclick="markPresent('${s.roll}')">Present</button>
+       <button style="background: #ef3535" onclick="markAbsent('${s.roll}')">Absent</button>`;
+    tr.innerHTML = `<td>${s.roll}</td>
+      <td>${s.name}</td>
+      <td>${s.parentNo}</td>
+      <td>
+        ${attBtns} <span id="status-${s.roll}">${s.status||""}</span>
+      </td>
+      <td><button style="background:#e9e9e9;color:#174fa1;" onclick="removeStudent(${i})">X</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function clearStudentsTable() {
+  document.querySelector("#studentTable tbody").innerHTML = "";
+}
+function addStudent() {
+  let key = getKey();
+  if(key.includes("undefined") || key.includes("--")) {
+    alert("Select Class, Stream and Section first");
+    return;
+  }
+  let name = document.getElementById("studentName").value.trim();
+  let roll = document.getElementById("rollNo").value.trim();
+  let parentNo = document.getElementById("parentNo").value.trim();
+  if(name === "" || roll === "" || parentNo === "") {
+    alert("Please fill all student details");
+    return;
+  }
+  let allData = loadFromStorage();
+  if(!allData[key]) allData[key] = [];
+  if(allData[key].some(s => s.roll === roll)){
+    alert("Roll Number already exists.");
+    return;
+  }
+  allData[key].push({name, roll, parentNo, status:"", present:0, absent:0});
+  saveToStorage(allData);
+  updateStudentsTable(allData[key]);
+  document.getElementById("studentName").value = '';
+  document.getElementById("rollNo").value = '';
+  document.getElementById("parentNo").value = '';
+}
+function removeStudent(index) {
+  let key = getKey();
+  let allData = loadFromStorage();
+  allData[key].splice(index, 1);
+  saveToStorage(allData);
+  updateStudentsTable(allData[key]);
+}
+function markPresent(roll) {
+  let key = getKey();
+  let allData = loadFromStorage();
+  let student = allData[key].find(s => s.roll === roll);
+  if(student) {
+    student.status = "Present";
+    if(typeof student.present !== "number") student.present = 0;
+    student.present++;
+    saveToStorage(allData);
+    updateStudentsTable(allData[key]);
+  }
+}
+function markAbsent(roll) {
+  let key = getKey();
+  let allData = loadFromStorage();
+  let student = allData[key].find(s => s.roll === roll);
+  if(student) {
+    student.status = "Absent";
+    if(typeof student.absent !== "number") student.absent = 0;
+    student.absent++;
+    saveToStorage(allData);
+    sendSMS(student);
+    updateStudentsTable(allData[key]);
+  }
+}
+function sendSMS(student) {
+  let date = new Date().toLocaleString();
+  alert(`SMS Sent to ${student.parentNo}: ${student.name} was absent on ${date}`);
+}
+function submitAttendance() {
+  let key = getKey();
+  let allData = loadFromStorage();
+  let stuArr = allData[key];
+  if(!stuArr || stuArr.length === 0) {
+    alert("No students added for attendance");
+    return;
+  }
+  for(let s of stuArr){
+    if(s.status !== "Present" && s.status !== "Absent"){
+      alert(`Mark attendance for roll no ${s.roll}`);
+      return;
+    }
+    s.status = ""; // reset for next day
+  }
+  saveToStorage(allData);
+  updateStudentsTable(allData[key]);
+  document.getElementById("attMsg").innerText = "Attendance submitted successfully!";
+}
+window.onload = showLogin;
+</script>
+</body>
+</html>
