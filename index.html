@@ -51,7 +51,7 @@
     <h3>Attendance Panel</h3>
     <label>
       Class:
-      <select id="classSelect" onchange="loadStreams()">
+      <select id="classSelect" onchange="onClassChange()">
         <option value="">Select Class</option>
         <option value="11">11</option>
         <option value="12">12</option>
@@ -59,7 +59,7 @@
     </label>
     <label>
       Stream:
-      <select id="streamSelect" onchange="loadSections()" disabled>
+      <select id="streamSelect" onchange="onStreamChange()" disabled>
         <option value="">Select Stream</option>
         <option value="Arts">Arts</option>
         <option value="Science">Science</option>
@@ -73,6 +73,8 @@
         <option value="B">B</option>
       </select>
     </label>
+
+    <button onclick="loadStudents()">Reload Students</button>
 
     <h4 style="margin-bottom:4px;color:#156ddf;">Add Student</h4>
     <label>Name: <input id="studentName" type="text"/></label>
@@ -104,16 +106,8 @@ const firebaseConfig = {
   appId: "1:75984706919:web:636bac2ea60839d87423c2"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-
-function getKey() {
-  let cls = document.getElementById("classSelect").value;
-  let stream = document.getElementById("streamSelect").value;
-  let section = document.getElementById("sectionSelect").value;
-  return `${cls}-${stream}-${section}`;
-}
 
 function showLogin() {
   document.getElementById("login").style.display = "block";
@@ -127,52 +121,70 @@ function login() {
   if (id === "30102025" && pass === "polygon") {
     document.getElementById("login").style.display = "none";
     document.getElementById("attendance").style.display = "block";
-    loadStreams();
   } else {
     document.getElementById("loginMessage").innerText = "Invalid ID or Password";
   }
 }
 
-function loadStreams() {
-  let cls = document.getElementById("classSelect").value;
-  document.getElementById("streamSelect").disabled = cls === "";
-  document.getElementById("sectionSelect").disabled = true;
+function onClassChange() {
+  const cls = document.getElementById("classSelect").value;
+  const streamSelect = document.getElementById("streamSelect");
+  const sectionSelect = document.getElementById("sectionSelect");
+
+  streamSelect.disabled = !cls;
+  streamSelect.value = "";
+  sectionSelect.disabled = true;
+  sectionSelect.value = "";
   clearStudentsTable();
 }
 
-function loadSections() {
-  let stream = document.getElementById("streamSelect").value;
-  document.getElementById("sectionSelect").disabled = stream === "";
+function onStreamChange() {
+  const stream = document.getElementById("streamSelect").value;
+  const sectionSelect = document.getElementById("sectionSelect");
+
+  sectionSelect.disabled = !stream;
+  sectionSelect.value = "";
   clearStudentsTable();
+}
+
+function getKey() {
+  const cls = document.getElementById("classSelect").value;
+  const stream = document.getElementById("streamSelect").value;
+  const section = document.getElementById("sectionSelect").value;
+  return `${cls}-${stream}-${section}`;
 }
 
 async function loadStudents() {
-  let key = getKey();
-  if (key.includes("undefined") || key.includes("--")) return;
-  const doc = await db.collection("polygonStudents").doc(key).get();
-  let students = [];
-  if (doc.exists) {
-    students = doc.data().students || [];
+  const key = getKey();
+  console.log("Loading students for:", key);
+  if (key.includes("undefined") || key.includes("--") || key.includes("")) return;
+  try {
+    const doc = await db.collection("polygonStudents").doc(key).get();
+    let students = [];
+    if (doc.exists) {
+      students = doc.data().students || [];
+    }
+    console.log("Students loaded:", students);
+    updateStudentsTable(students);
+    window.studentsData = students;
+  } catch (error) {
+    console.error("Error loading students:", error);
   }
-  updateStudentsTable(students);
-  window.studentsData = students;
 }
 
 function updateStudentsTable(students) {
-  let tbody = document.querySelector("#studentTable tbody");
+  const tbody = document.querySelector("#studentTable tbody");
   tbody.innerHTML = "";
   students.forEach((s, i) => {
     let tr = document.createElement("tr");
-    let attBtns = s.status === "Absent" ?
-      `<button style="background: #ef3535" disabled>Absent</button>` :
+    let attBtns = s.status === "Absent" ? 
+      `<button style="background: #ef3535" disabled>Absent</button>` : 
       `<button onclick="markPresent('${s.roll}')">Present</button>
        <button style="background: #ef3535" onclick="markAbsent('${s.roll}')">Absent</button>`;
     tr.innerHTML = `<td>${s.roll}</td>
       <td>${s.name}</td>
       <td>${s.parentNo}</td>
-      <td>
-        ${attBtns} <span id="status-${s.roll}">${s.status || ""}</span>
-      </td>
+      <td>${attBtns} <span id="status-${s.roll}">${s.status || ""}</span></td>
       <td><button style="background:#e9e9e9;color:#174fa1;" onclick="removeStudent(${i})">X</button></td>`;
     tbody.appendChild(tr);
   });
@@ -180,19 +192,19 @@ function updateStudentsTable(students) {
 }
 
 async function addStudent() {
-  let key = getKey();
-  if (key.includes("undefined") || key.includes("--")) {
+  const key = getKey();
+  if (key.includes("undefined") || key.includes("--") || key.includes("")) {
     alert("Select Class, Stream and Section first");
     return;
   }
-  let name = document.getElementById("studentName").value.trim();
-  let roll = document.getElementById("rollNo").value.trim();
-  let parentNo = document.getElementById("parentNo").value.trim();
-  if (name === "" || roll === "" || parentNo === "") {
+  const name = document.getElementById("studentName").value.trim();
+  const roll = document.getElementById("rollNo").value.trim();
+  const parentNo = document.getElementById("parentNo").value.trim();
+  if (!name || !roll || !parentNo) {
     alert("Please fill all student details");
     return;
   }
-  let students = window.studentsData || [];
+  const students = window.studentsData || [];
   if (students.some(s => s.roll === roll)) {
     alert("Roll Number already exists.");
     return;
@@ -206,8 +218,8 @@ async function addStudent() {
 }
 
 async function removeStudent(index) {
-  let key = getKey();
-  let students = window.studentsData || [];
+  const key = getKey();
+  const students = window.studentsData || [];
   students.splice(index, 1);
   await saveStudents(key, students);
   updateStudentsTable(students);
@@ -218,14 +230,14 @@ async function saveStudents(key, students) {
     await db.collection("polygonStudents").doc(key).set({ students });
     console.log("Saved successfully");
   } catch (e) {
-    console.error("Error saving", e);
+    console.error("Error saving:", e);
   }
 }
 
 async function markPresent(roll) {
-  let key = getKey();
-  let students = window.studentsData || [];
-  let student = students.find(s => s.roll === roll);
+  const key = getKey();
+  const students = window.studentsData || [];
+  const student = students.find(s => s.roll === roll);
   if (student) {
     student.status = "Present";
     if (typeof student.present !== "number") student.present = 0;
@@ -236,9 +248,9 @@ async function markPresent(roll) {
 }
 
 async function markAbsent(roll) {
-  let key = getKey();
-  let students = window.studentsData || [];
-  let student = students.find(s => s.roll === roll);
+  const key = getKey();
+  const students = window.studentsData || [];
+  const student = students.find(s => s.roll === roll);
   if (student) {
     student.status = "Absent";
     if (typeof student.absent !== "number") student.absent = 0;
@@ -255,18 +267,18 @@ function sendSMS(student) {
 }
 
 async function submitAttendance() {
-  let key = getKey();
-  let students = window.studentsData || [];
+  const key = getKey();
+  const students = window.studentsData || [];
   if (!students || students.length === 0) {
     alert("No students added for attendance");
     return;
   }
-  for (let s of students) {
+  for (const s of students) {
     if (s.status !== "Present" && s.status !== "Absent") {
       alert(`Mark attendance for roll no ${s.roll}`);
       return;
     }
-    s.status = ""; // reset for next day
+    s.status = "";
   }
   await saveStudents(key, students);
   updateStudentsTable(students);
