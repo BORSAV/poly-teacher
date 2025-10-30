@@ -83,7 +83,7 @@
     <label>Parent Number: <input id="parentNo" type="text" /></label>
     <button onclick="addStudent()" id="addStudentBtn" disabled>Add Student</button>
 
-    <h4 style="margin-bottom:4px;margin-top:22px;color:#156ddf;">Student List & Attendance</h4>
+    <h4 style="margin-top:22px;color:#156ddf;">Student List & Attendance</h4>
     <table id="studentTable">
       <thead>
         <tr>
@@ -97,6 +97,7 @@
       <tbody></tbody>
     </table>
     <button onclick="submitAttendance()">Submit Attendance</button>
+    <button onclick="shareAttendanceGroup()">Share Attendance to WhatsApp Group</button>
     <p id="attMsg" style="color:green;"></p>
   </div>
 </div>
@@ -125,7 +126,7 @@ function showLogin() {
 function login() {
   const id = document.getElementById("teacherId").value.trim();
   const pass = document.getElementById("teacherPass").value;
-  if(id === "30102025" && pass === "polygon") {
+  if (id === "30102025" && pass === "polygon") {
     document.getElementById("login").style.display = "none";
     document.getElementById("attendance").style.display = "block";
   } else {
@@ -279,14 +280,8 @@ async function markAbsent(roll) {
     if (typeof student.absent !== "number") student.absent = 0;
     student.absent++;
     await saveStudents(key, students);
-    sendSMS(student);
     updateStudentsTable(students);
   }
-}
-
-function sendSMS(student) {
-  let date = new Date().toLocaleString();
-  alert(`SMS Sent to ${student.parentNo}: ${student.name} was absent on ${date}`);
 }
 
 async function submitAttendance() {
@@ -306,6 +301,31 @@ async function submitAttendance() {
   await saveStudents(key, students);
   updateStudentsTable(students);
   document.getElementById("attMsg").innerText = "Attendance submitted successfully!";
+}
+
+// New: Share Attendance to WhatsApp Group button handler
+function shareAttendanceGroup() {
+  const className = document.getElementById("classSelect").value.trim();
+  const stream = document.getElementById("streamSelect").value.trim();
+  const section = document.getElementById("sectionSelect").value.trim();
+  if (!(className && stream && section)) {
+    alert("Please select Class, Stream and Section before sharing.");
+    return;
+  }
+  const students = window.studentsData || [];
+  let msg = `Attendance for Class ${className}, ${stream}, Section ${section}\n\nPresent:\n`;
+  students.filter(s => s.status === "Present").forEach(s => {
+    msg += `- ${s.name} (Roll ${s.roll})\n`;
+  });
+  msg += `\nAbsent:\n`;
+  students.filter(s => s.status === "Absent").forEach(s => {
+    msg += `- ${s.name} (Roll ${s.roll})\n`;
+  });
+
+  const encodedMsg = encodeURIComponent(msg);
+  // Opens WhatsApp Web with prefilled message, teacher can select correct group
+  const wpUrl = `https://wa.me/?text=${encodedMsg}`;
+  window.open(wpUrl, "_blank");
 }
 
 window.onload = function () {
