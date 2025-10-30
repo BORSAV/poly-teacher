@@ -16,7 +16,7 @@
     box-shadow:0 2px 8px #00339644;
     width:140px; height:140px;
     display:flex; align-items:center; justify-content:center;
-    padding:10px; 
+    padding:10px;
   }
   .logo-circle img { width:120px; height:120px; border-radius:50%; }
   h2,h3 { color: #114c98; text-align: center; margin-top:0; }
@@ -194,15 +194,16 @@ async function loadStudents() {
   }
 }
 
+// BOTH Present/Absent buttons always shown
 function updateStudentsTable(students) {
   let tbody = document.querySelector("#studentTable tbody");
   tbody.innerHTML = "";
   students.forEach((student, i) => {
     let tr = document.createElement("tr");
-    let attBtns = student.status === "Absent"
-      ? `<button style="background: #ef3535" disabled>Absent</button>`
-      : `<button onclick="markPresent('${student.roll}')">Present</button>
-         <button style="background: #ef3535" onclick="markAbsent('${student.roll}')">Absent</button>`;
+    let attBtns = `
+      <button onclick="markPresent('${student.roll}')">Present</button>
+      <button style="background: #ef3535" onclick="markAbsent('${student.roll}')">Absent</button>
+    `;
     tr.innerHTML = `<td>${student.roll}</td>
       <td>${student.name}</td>
       <td>${student.parentNo}</td>
@@ -303,7 +304,7 @@ async function submitAttendance() {
   document.getElementById("attMsg").innerText = "Attendance submitted successfully!";
 }
 
-// New: Share Attendance to WhatsApp Group button handler
+// Share Attendance to WhatsApp Group button handler
 function shareAttendanceGroup() {
   const className = document.getElementById("classSelect").value.trim();
   const stream = document.getElementById("streamSelect").value.trim();
@@ -323,7 +324,6 @@ function shareAttendanceGroup() {
   });
 
   const encodedMsg = encodeURIComponent(msg);
-  // Opens WhatsApp Web with prefilled message, teacher can select correct group
   const wpUrl = `https://wa.me/?text=${encodedMsg}`;
   window.open(wpUrl, "_blank");
 }
