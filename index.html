@@ -104,7 +104,6 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyD3C_5CptcWNUJ35E4MzG-fKy7fTjQDCX8",
@@ -117,6 +116,8 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+let lastAttendanceList = [];
 
 function showLogin() {
   document.getElementById("login").style.display = "block";
@@ -194,7 +195,6 @@ async function loadStudents() {
   }
 }
 
-// BOTH Present/Absent buttons always shown
 function updateStudentsTable(students) {
   let tbody = document.querySelector("#studentTable tbody");
   tbody.innerHTML = "";
@@ -297,14 +297,18 @@ async function submitAttendance() {
       alert(`Mark attendance for roll no ${s.roll}`);
       return;
     }
-    s.status = "";
+    // keep status for WhatsApp sharing
   }
+  // Save a copy for sharing to WhatsApp
+  lastAttendanceList = JSON.parse(JSON.stringify(students));
+  // Now reset for next attendance
+  students.forEach(s => s.status = "");
   await saveStudents(key, students);
   updateStudentsTable(students);
   document.getElementById("attMsg").innerText = "Attendance submitted successfully!";
 }
 
-// Share Attendance to WhatsApp Group button handler
+// Share Attendance to WhatsApp Group
 function shareAttendanceGroup() {
   const className = document.getElementById("classSelect").value.trim();
   const stream = document.getElementById("streamSelect").value.trim();
@@ -313,13 +317,18 @@ function shareAttendanceGroup() {
     alert("Please select Class, Stream and Section before sharing.");
     return;
   }
-  const students = window.studentsData || [];
+  // Prefer current attendance if marked, else last submitted
+  let students =
+    (window.studentsData && window.studentsData.some(s=>s.status==="Present"||s.status==="Absent"))
+      ? window.studentsData
+      : lastAttendanceList;
+
   let msg = `Attendance for Class ${className}, ${stream}, Section ${section}\n\nPresent:\n`;
-  students.filter(s => s.status === "Present").forEach(s => {
+  (students||[]).filter(s => s.status === "Present").forEach(s => {
     msg += `- ${s.name} (Roll ${s.roll})\n`;
   });
   msg += `\nAbsent:\n`;
-  students.filter(s => s.status === "Absent").forEach(s => {
+  (students||[]).filter(s => s.status === "Absent").forEach(s => {
     msg += `- ${s.name} (Roll ${s.roll})\n`;
   });
 
