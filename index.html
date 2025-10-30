@@ -34,7 +34,7 @@
 <div class="container">
   <div class="logo-wrap">
     <div class="logo-circle">
-      <img src="ChatGPT-Image-Oct-30-2025-12_48_35-PM.jpg" alt="Polygon Senior Secondary School Logo">
+      <img src="ChatGPT-Image-Oct-30-2025-12_48_35-PM.jpg" alt="Polygon Logo">
     </div>
   </div>
   <h2>Polygon Senior Secondary School</h2>
@@ -90,22 +90,18 @@
   </div>
 </div>
 
-<!-- Firebase Core SDK -->
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <script>
-const teacherID = "30102025";
-const teacherPass = "polygon";
-
-// TODO: Replace this with your own Firebase config object
 const firebaseConfig = {
-  apiKey: "AIzaSyD5UcOXsgFyHdIfqENPGPn3qjGy6ZPWsww",
-  authDomain: "polygonattendance.firebaseapp.com",
-  projectId: "polygonattendance",
-  storageBucket: "polygonattendance.firebasestorage.app",
-  messagingSenderId: "298974801497",
-  appId: "1:298974801497:web:6716ba9d25eaabee5a0b48"
+  apiKey: "AIzaSyD3C_5CptcWNUJ35E4MzG-fKy7fTjQDCX8",
+  authDomain: "polygon-fe569.firebaseapp.com",
+  projectId: "polygon-fe569",
+  storageBucket: "polygon-fe569.firebasestorage.app",
+  messagingSenderId: "75984706919",
+  appId: "1:75984706919:web:636bac2ea60839d87423c2"
 };
 
 // Initialize Firebase
@@ -128,7 +124,7 @@ showLogin();
 function login() {
   const id = document.getElementById("teacherId").value.trim();
   const pass = document.getElementById("teacherPass").value;
-  if(id === teacherID && pass === teacherPass) {
+  if (id === "30102025" && pass === "polygon") {
     document.getElementById("login").style.display = "none";
     document.getElementById("attendance").style.display = "block";
     loadStreams();
@@ -152,55 +148,56 @@ function loadSections() {
 
 async function loadStudents() {
   let key = getKey();
-  if(key.includes("undefined") || key.includes("--")) return;
+  if (key.includes("undefined") || key.includes("--")) return;
   const doc = await db.collection("polygonStudents").doc(key).get();
   let students = [];
-  if(doc.exists) {
+  if (doc.exists) {
     students = doc.data().students || [];
   }
   updateStudentsTable(students);
+  window.studentsData = students;
 }
 
 function updateStudentsTable(students) {
-  let tbody = document.querySelector("#studentTable tbody");  
+  let tbody = document.querySelector("#studentTable tbody");
   tbody.innerHTML = "";
   students.forEach((s, i) => {
     let tr = document.createElement("tr");
-    let attBtns = s.status === "Absent" ? 
-      `<button style="background: #ef3535" disabled>Absent</button>` : 
+    let attBtns = s.status === "Absent" ?
+      `<button style="background: #ef3535" disabled>Absent</button>` :
       `<button onclick="markPresent('${s.roll}')">Present</button>
        <button style="background: #ef3535" onclick="markAbsent('${s.roll}')">Absent</button>`;
     tr.innerHTML = `<td>${s.roll}</td>
       <td>${s.name}</td>
       <td>${s.parentNo}</td>
       <td>
-        ${attBtns} <span id="status-${s.roll}">${s.status||""}</span>
+        ${attBtns} <span id="status-${s.roll}">${s.status || ""}</span>
       </td>
       <td><button style="background:#e9e9e9;color:#174fa1;" onclick="removeStudent(${i})">X</button></td>`;
     tbody.appendChild(tr);
   });
-  window.studentsData = students; // store globally for convenience
+  window.studentsData = students;
 }
 
 async function addStudent() {
   let key = getKey();
-  if(key.includes("undefined") || key.includes("--")) {
+  if (key.includes("undefined") || key.includes("--")) {
     alert("Select Class, Stream and Section first");
     return;
   }
   let name = document.getElementById("studentName").value.trim();
   let roll = document.getElementById("rollNo").value.trim();
   let parentNo = document.getElementById("parentNo").value.trim();
-  if(name === "" || roll === "" || parentNo === "") {
+  if (name === "" || roll === "" || parentNo === "") {
     alert("Please fill all student details");
     return;
   }
   let students = window.studentsData || [];
-  if(students.some(s => s.roll === roll)){
+  if (students.some(s => s.roll === roll)) {
     alert("Roll Number already exists.");
     return;
   }
-  students.push({name, roll, parentNo, status:"", present:0, absent:0});
+  students.push({ name, roll, parentNo, status: "", present: 0, absent: 0 });
   await saveStudents(key, students);
   updateStudentsTable(students);
   document.getElementById("studentName").value = '';
@@ -218,9 +215,9 @@ async function removeStudent(index) {
 
 async function saveStudents(key, students) {
   try {
-    await db.collection("polygonStudents").doc(key).set({students});
+    await db.collection("polygonStudents").doc(key).set({ students });
     console.log("Saved successfully");
-  } catch(e) {
+  } catch (e) {
     console.error("Error saving", e);
   }
 }
@@ -229,9 +226,9 @@ async function markPresent(roll) {
   let key = getKey();
   let students = window.studentsData || [];
   let student = students.find(s => s.roll === roll);
-  if(student) {
+  if (student) {
     student.status = "Present";
-    if(typeof student.present !== "number") student.present = 0;
+    if (typeof student.present !== "number") student.present = 0;
     student.present++;
     await saveStudents(key, students);
     updateStudentsTable(students);
@@ -242,9 +239,9 @@ async function markAbsent(roll) {
   let key = getKey();
   let students = window.studentsData || [];
   let student = students.find(s => s.roll === roll);
-  if(student) {
+  if (student) {
     student.status = "Absent";
-    if(typeof student.absent !== "number") student.absent = 0;
+    if (typeof student.absent !== "number") student.absent = 0;
     student.absent++;
     await saveStudents(key, students);
     sendSMS(student);
@@ -260,12 +257,12 @@ function sendSMS(student) {
 async function submitAttendance() {
   let key = getKey();
   let students = window.studentsData || [];
-  if(!students || students.length === 0) {
+  if (!students || students.length === 0) {
     alert("No students added for attendance");
     return;
   }
-  for(let s of students){
-    if(s.status !== "Present" && s.status !== "Absent"){
+  for (let s of students) {
+    if (s.status !== "Present" && s.status !== "Absent") {
       alert(`Mark attendance for roll no ${s.roll}`);
       return;
     }
