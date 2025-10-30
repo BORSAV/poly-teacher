@@ -22,7 +22,8 @@
   h2,h3 { color: #114c98; text-align: center; margin-top:0; }
   label, select, input { display:block; margin:6px 0; font-size:1rem; }
   button { margin:6px 9px 6px 0; padding:5px 15px; background:#114c98; color:#fff; font-weight:600; border:0; border-radius:5px; cursor:pointer;}
-  button:hover { background:#156ddf;}
+  button:disabled { background:#9bbcec; color:#f9f9f9; cursor:not-allowed;}
+  button:hover:enabled { background:#156ddf;}
   table { width:100%; border-collapse:collapse; margin-top:12px;}
   th,td { border:1px solid #dde8f7; padding:7px; text-align:left;}
   th { background:#e7f2fb; color:#184a80;}
@@ -51,7 +52,7 @@
     <h3>Attendance Panel</h3>
     <label>
       Class:
-      <select id="classSelect" onchange="onClassChange()">
+      <select id="classSelect">
         <option value="">Select Class</option>
         <option value="11">11</option>
         <option value="12">12</option>
@@ -59,7 +60,7 @@
     </label>
     <label>
       Stream:
-      <select id="streamSelect" onchange="onStreamChange()" disabled>
+      <select id="streamSelect" disabled>
         <option value="">Select Stream</option>
         <option value="Arts">Arts</option>
         <option value="Science">Science</option>
@@ -67,7 +68,7 @@
     </label>
     <label>
       Section:
-      <select id="sectionSelect" onchange="loadStudents()" disabled>
+      <select id="sectionSelect" disabled>
         <option value="">Select Section</option>
         <option value="A">A</option>
         <option value="B">B</option>
@@ -80,7 +81,7 @@
     <label>Name: <input id="studentName" type="text"/></label>
     <label>Roll No: <input id="rollNo" type="number" /></label>
     <label>Parent Number: <input id="parentNo" type="text" /></label>
-    <button onclick="addStudent()">Add Student</button>
+    <button onclick="addStudent()" id="addStudentBtn" disabled>Add Student</button>
 
     <h4 style="margin-bottom:4px;margin-top:22px;color:#156ddf;">Student List & Attendance</h4>
     <table id="studentTable">
@@ -113,7 +114,6 @@ function showLogin() {
   document.getElementById("login").style.display = "block";
   document.getElementById("attendance").style.display = "none";
 }
-showLogin();
 
 function login() {
   const id = document.getElementById("teacherId").value.trim();
@@ -126,25 +126,38 @@ function login() {
   }
 }
 
-function onClassChange() {
-  const cls = document.getElementById("classSelect").value;
-  const streamSelect = document.getElementById("streamSelect");
-  const sectionSelect = document.getElementById("sectionSelect");
-
+// Dropdown event logic for enabling/disabling and loading
+document.getElementById("classSelect").addEventListener("change", function() {
+  let cls = this.value;
+  let streamSelect = document.getElementById("streamSelect");
+  let sectionSelect = document.getElementById("sectionSelect");
   streamSelect.disabled = !cls;
   streamSelect.value = "";
   sectionSelect.disabled = true;
   sectionSelect.value = "";
   clearStudentsTable();
-}
+  updateAddButtonState();
+});
 
-function onStreamChange() {
-  const stream = document.getElementById("streamSelect").value;
-  const sectionSelect = document.getElementById("sectionSelect");
-
+document.getElementById("streamSelect").addEventListener("change", function() {
+  let stream = this.value;
+  let sectionSelect = document.getElementById("sectionSelect");
   sectionSelect.disabled = !stream;
   sectionSelect.value = "";
   clearStudentsTable();
+  updateAddButtonState();
+});
+
+document.getElementById("sectionSelect").addEventListener("change", function() {
+  updateAddButtonState();
+  loadStudents();
+});
+
+function updateAddButtonState() {
+  let cls = document.getElementById("classSelect").value;
+  let stream = document.getElementById("streamSelect").value;
+  let section = document.getElementById("sectionSelect").value;
+  document.getElementById("addStudentBtn").disabled = !(cls && stream && section);
 }
 
 function getKey() {
@@ -152,6 +165,10 @@ function getKey() {
   const stream = document.getElementById("streamSelect").value;
   const section = document.getElementById("sectionSelect").value;
   return `${cls}-${stream}-${section}`;
+}
+
+function clearStudentsTable() {
+  document.querySelector("#studentTable tbody").innerHTML = "";
 }
 
 async function loadStudents() {
@@ -192,8 +209,10 @@ function updateStudentsTable(students) {
 }
 
 async function addStudent() {
-  const key = getKey();
-  if (key.includes("undefined") || key.includes("--") || key.includes("")) {
+  let cls = document.getElementById("classSelect").value;
+  let stream = document.getElementById("streamSelect").value;
+  let section = document.getElementById("sectionSelect").value;
+  if (!(cls && stream && section)) {
     alert("Select Class, Stream and Section first");
     return;
   }
@@ -204,6 +223,7 @@ async function addStudent() {
     alert("Please fill all student details");
     return;
   }
+  const key = getKey();
   const students = window.studentsData || [];
   if (students.some(s => s.roll === roll)) {
     alert("Roll Number already exists.");
@@ -284,6 +304,12 @@ async function submitAttendance() {
   updateStudentsTable(students);
   document.getElementById("attMsg").innerText = "Attendance submitted successfully!";
 }
+
+// Initial state update on page load
+window.onload = function() {
+  showLogin();
+  updateAddButtonState();
+};
 </script>
 </body>
 </html>
