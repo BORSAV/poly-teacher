@@ -7,20 +7,12 @@
 <style>
   body { font-family: Arial,sans-serif; background: #f7fbff; margin:0; min-height:100vh; }
   .container { background: #fff; max-width: 650px; margin:32px auto; border-radius:16px; box-shadow:0 1px 16px #0003; padding:30px; }
-  .logo-wrap {
-    display:flex; justify-content:center; align-items:center; margin-bottom:20px;
-  }
-  .logo-circle {
-    background:#fff;
-    border-radius:50%;
-    box-shadow:0 2px 8px #00339644;
-    width:140px; height:140px;
-    display:flex; align-items:center; justify-content:center;
-    padding:10px;
-  }
+  .logo-wrap { display:flex; justify-content:center; align-items:center; margin-bottom:20px; }
+  .logo-circle { background:#fff; border-radius:50%; box-shadow:0 2px 8px #00339644; width:140px; height:140px; display:flex; align-items:center; justify-content:center; padding:10px; }
   .logo-circle img { width:120px; height:120px; border-radius:50%; }
   h2,h3 { color: #114c98; text-align: center; margin-top:0; }
   label, select, input { display:block; margin:6px 0; font-size:1rem; }
+  .hidden { display: none !important; }
   button { margin:6px 9px 6px 0; padding:5px 15px; background:#114c98; color:#fff; font-weight:600; border:0; border-radius:5px; cursor:pointer;}
   button:disabled { background:#9bbcec; color:#f9f9f9; cursor:not-allowed;}
   button:hover:enabled { background:#156ddf;}
@@ -34,9 +26,7 @@
 <body>
 <div class="container">
   <div class="logo-wrap">
-    <div class="logo-circle">
-      <img src="ChatGPT-Image-Oct-30-2025-12_48_35-PM.jpg" alt="Polygon Logo" />
-    </div>
+    <div class="logo-circle"><img src="ChatGPT-Image-Oct-30-2025-12_48_35-PM.jpg" alt="Polygon Logo" /></div>
   </div>
   <h2>Polygon Senior Secondary School</h2>
 
@@ -50,30 +40,42 @@
 
   <div id="attendance">
     <h3>Attendance Panel</h3>
-    <label>
-      Class:
-      <select id="classSelect">
+    <label>Class:
+      <select id="classSelect" onchange="handleClassChange()">
         <option value="">Select Class</option>
-        <option value="11">11</option>
-        <option value="12">12</option>
+        <option value="ANKUR">ANKUR</option>
+        <option value="MUKUL">MUKUL</option>
+        <option value="1">Class 1</option>
+        <option value="2">Class 2</option>
+        <option value="3">Class 3</option>
+        <option value="4">Class 4</option>
+        <option value="5">Class 5</option>
+        <option value="6">Class 6</option>
+        <option value="7">Class 7</option>
+        <option value="8">Class 8</option>
+        <option value="9">Class 9</option>
+        <option value="10">Class 10</option>
+        <option value="11">Class 11</option>
+        <option value="12">Class 12</option>
       </select>
     </label>
-    <label>
-      Stream:
-      <select id="streamSelect" disabled>
-        <option value="">Select Stream</option>
-        <option value="Arts">Arts</option>
-        <option value="Science">Science</option>
-      </select>
-    </label>
-    <label>
-      Section:
-      <select id="sectionSelect" disabled>
-        <option value="">Select Section</option>
-        <option value="A">A</option>
-        <option value="B">B</option>
-      </select>
-    </label>
+    
+    <div id="streamSectionDiv" class="hidden">
+      <label>Stream:
+        <select id="streamSelect" onchange="handleStreamChange()">
+          <option value="">Select Stream</option>
+          <option value="Arts">Arts</option>
+          <option value="Science">Science</option>
+        </select>
+      </label>
+      <label>Section:
+        <select id="sectionSelect" onchange="loadStudents()">
+          <option value="">Select Section</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+        </select>
+      </label>
+    </div>
 
     <button onclick="loadStudents()">Reload Students</button>
 
@@ -81,23 +83,17 @@
     <label>Name: <input id="studentName" type="text" /></label>
     <label>Roll No: <input id="rollNo" type="number" /></label>
     <label>Parent Number: <input id="parentNo" type="text" /></label>
-    <button onclick="addStudent()" id="addStudentBtn" disabled>Add Student</button>
+    <button onclick="addStudent()" id="addStudentBtn">Add Student</button>
 
-    <h4 style="margin-top:22px;color:#156ddf;">Student List & Attendance</h4>
+    <h4 style="margin-top:22px;color:#156ddf;">Student List</h4>
     <table id="studentTable">
       <thead>
-        <tr>
-          <th>Roll No</th>
-          <th>Name</th>
-          <th>Parent Number</th>
-          <th>Status</th>
-          <th>Remove</th>
-        </tr>
+        <tr><th>Roll No</th><th>Name</th><th>Parent No</th><th>Status</th><th>Remove</th></tr>
       </thead>
       <tbody></tbody>
     </table>
     <button onclick="submitAttendance()">Submit Attendance</button>
-    <button onclick="shareAttendanceGroup()">Share Attendance to WhatsApp Group</button>
+    <button onclick="shareAttendanceGroup()">Share to WhatsApp</button>
     <p id="attMsg" style="color:green;"></p>
   </div>
 </div>
@@ -116,231 +112,112 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-
 let lastAttendanceList = [];
 
-function showLogin() {
-  document.getElementById("login").style.display = "block";
-  document.getElementById("attendance").style.display = "none";
-}
-
 function login() {
-  const id = document.getElementById("teacherId").value.trim();
-  const pass = document.getElementById("teacherPass").value;
-  if (id === "30102025" && pass === "polygon") {
+  if (document.getElementById("teacherId").value === "30102025" && document.getElementById("teacherPass").value === "polygon") {
     document.getElementById("login").style.display = "none";
     document.getElementById("attendance").style.display = "block";
-  } else {
-    document.getElementById("loginMessage").innerText = "Invalid ID or Password";
-  }
+  } else { document.getElementById("loginMessage").innerText = "Invalid Login"; }
 }
 
-document.getElementById("classSelect").addEventListener("change", function() {
-  let cls = this.value;
-  let streamSelect = document.getElementById("streamSelect");
-  let sectionSelect = document.getElementById("sectionSelect");
-  streamSelect.disabled = !cls;
-  streamSelect.value = "";
-  sectionSelect.disabled = true;
-  sectionSelect.value = "";
+function handleClassChange() {
+  const cls = document.getElementById("classSelect").value;
+  const ssDiv = document.getElementById("streamSectionDiv");
+  if (cls === "11" || cls === "12") {
+    ssDiv.classList.remove("hidden");
+  } else {
+    ssDiv.classList.add("hidden");
+    if(cls) loadStudents();
+  }
   clearStudentsTable();
-  updateAddButtonState();
-});
+}
 
-document.getElementById("streamSelect").addEventListener("change", function() {
-  let stream = this.value;
-  let sectionSelect = document.getElementById("sectionSelect");
-  sectionSelect.disabled = !stream;
-  sectionSelect.value = "";
+function handleStreamChange() {
+  document.getElementById("sectionSelect").value = "";
   clearStudentsTable();
-  updateAddButtonState();
-});
-
-document.getElementById("sectionSelect").addEventListener("change", function() {
-  updateAddButtonState();
-  loadStudents();
-});
-
-function updateAddButtonState() {
-  let cls = document.getElementById("classSelect").value.trim();
-  let stream = document.getElementById("streamSelect").value.trim();
-  let section = document.getElementById("sectionSelect").value.trim();
-  document.getElementById("addStudentBtn").disabled = !(cls && stream && section);
 }
 
 function getKey() {
-  let cls = document.getElementById("classSelect").value.trim();
-  let stream = document.getElementById("streamSelect").value.trim();
-  let section = document.getElementById("sectionSelect").value.trim();
-  return `${cls}-${stream}-${section}`;
-}
-
-function clearStudentsTable() {
-  document.querySelector("#studentTable tbody").innerHTML = "";
+  const cls = document.getElementById("classSelect").value;
+  if (!cls) return null;
+  if (cls === "11" || cls === "12") {
+    const stream = document.getElementById("streamSelect").value;
+    const section = document.getElementById("sectionSelect").value;
+    return (stream && section) ? `${cls}-${stream}-${section}` : null;
+  }
+  return cls;
 }
 
 async function loadStudents() {
   const key = getKey();
-  if (!key || key.includes("undefined") || key.includes("--")) return;
-  try {
-    const doc = await db.collection("polygonStudents").doc(key).get();
-    let students = [];
-    if (doc.exists) {
-      students = doc.data().students || [];
-    }
-    updateStudentsTable(students);
-    window.studentsData = students;
-  } catch (error) {
-    console.error("Error loading students:", error);
-  }
+  if (!key) return;
+  const doc = await db.collection("polygonStudents").doc(key).get();
+  window.studentsData = doc.exists ? (doc.data().students || []) : [];
+  updateStudentsTable(window.studentsData);
 }
 
 function updateStudentsTable(students) {
   let tbody = document.querySelector("#studentTable tbody");
   tbody.innerHTML = "";
-  students.forEach((student, i) => {
+  students.forEach((s, i) => {
     let tr = document.createElement("tr");
-    let attBtns = `
-      <button onclick="markPresent('${student.roll}')">Present</button>
-      <button style="background: #ef3535" onclick="markAbsent('${student.roll}')">Absent</button>
-    `;
-    tr.innerHTML = `<td>${student.roll}</td>
-      <td>${student.name}</td>
-      <td>${student.parentNo}</td>
-      <td>${attBtns} <span id="status-${student.roll}">${student.status || ""}</span></td>
-      <td><button style="background:#e9e9e9;color:#174fa1;" onclick="removeStudent(${i})">X</button></td>`;
+    tr.innerHTML = `<td>${s.roll}</td><td>${s.name}</td><td>${s.parentNo}</td>
+      <td><button onclick="markStatus('${s.roll}','Present')">P</button>
+      <button style="background:red" onclick="markStatus('${s.roll}','Absent')">A</button>
+      <span id="status-${s.roll}">${s.status || ""}</span></td>
+      <td><button onclick="removeStudent(${i})">X</button></td>`;
     tbody.appendChild(tr);
   });
-  window.studentsData = students;
+}
+
+async function markStatus(roll, status) {
+  const key = getKey();
+  let student = window.studentsData.find(s => s.roll === roll);
+  if (student) {
+    student.status = status;
+    status === "Present" ? (student.present = (student.present || 0) + 1) : (student.absent = (student.absent || 0) + 1);
+    await db.collection("polygonStudents").doc(key).set({ students: window.studentsData });
+    updateStudentsTable(window.studentsData);
+  }
 }
 
 async function addStudent() {
-  let cls = document.getElementById("classSelect").value.trim();
-  let stream = document.getElementById("streamSelect").value.trim();
-  let section = document.getElementById("sectionSelect").value.trim();
-  if (!(cls && stream && section)) {
-    alert("Select Class, Stream and Section first");
-    return;
-  }
-  let name = document.getElementById("studentName").value.trim();
-  let roll = document.getElementById("rollNo").value.trim();
-  let parentNo = document.getElementById("parentNo").value.trim();
-  if (!(name && roll && parentNo)) {
-    alert("Please fill all student details");
-    return;
-  }
-  let students = window.studentsData || [];
-  if (students.some((s) => s.roll === roll)) {
-    alert("Roll Number already exists.");
-    return;
-  }
-  students.push({ name, roll, parentNo, status: "", present: 0, absent: 0 });
-  await saveStudents(`${cls}-${stream}-${section}`, students);
-  updateStudentsTable(students);
-  document.getElementById("studentName").value = "";
-  document.getElementById("rollNo").value = "";
-  document.getElementById("parentNo").value = "";
+  const key = getKey();
+  const name = document.getElementById("studentName").value;
+  const roll = document.getElementById("rollNo").value;
+  const parentNo = document.getElementById("parentNo").value;
+  if (!key || !name || !roll) return alert("Fill all details");
+  window.studentsData.push({ name, roll, parentNo, status: "", present: 0, absent: 0 });
+  await db.collection("polygonStudents").doc(key).set({ students: window.studentsData });
+  updateStudentsTable(window.studentsData);
 }
 
 async function removeStudent(index) {
-  let key = getKey();
-  let students = window.studentsData || [];
-  students.splice(index, 1);
-  await saveStudents(key, students);
-  updateStudentsTable(students);
-}
-
-async function saveStudents(key, students) {
-  try {
-    await db.collection("polygonStudents").doc(key).set({ students });
-    console.log("Saved successfully");
-  } catch (error) {
-    console.error("Error saving:", error);
-  }
-}
-
-async function markPresent(roll) {
-  let key = getKey();
-  let students = window.studentsData || [];
-  let student = students.find((s) => s.roll === roll);
-  if (student) {
-    student.status = "Present";
-    if (typeof student.present !== "number") student.present = 0;
-    student.present++;
-    await saveStudents(key, students);
-    updateStudentsTable(students);
-  }
-}
-
-async function markAbsent(roll) {
-  let key = getKey();
-  let students = window.studentsData || [];
-  let student = students.find((s) => s.roll === roll);
-  if (student) {
-    student.status = "Absent";
-    if (typeof student.absent !== "number") student.absent = 0;
-    student.absent++;
-    await saveStudents(key, students);
-    updateStudentsTable(students);
-  }
+  window.studentsData.splice(index, 1);
+  await db.collection("polygonStudents").doc(getKey()).set({ students: window.studentsData });
+  updateStudentsTable(window.studentsData);
 }
 
 async function submitAttendance() {
-  let key = getKey();
-  let students = window.studentsData || [];
-  if (!students || students.length === 0) {
-    alert("No students added for attendance");
-    return;
-  }
-  for (let s of students) {
-    if (s.status !== "Present" && s.status !== "Absent") {
-      alert(`Mark attendance for roll no ${s.roll}`);
-      return;
-    }
-    // keep status for WhatsApp sharing
-  }
-  // Save a copy for sharing to WhatsApp
-  lastAttendanceList = JSON.parse(JSON.stringify(students));
-  // Now reset for next attendance
-  students.forEach(s => s.status = "");
-  await saveStudents(key, students);
-  updateStudentsTable(students);
-  document.getElementById("attMsg").innerText = "Attendance submitted successfully!";
+  const key = getKey();
+  lastAttendanceList = JSON.parse(JSON.stringify(window.studentsData));
+  window.studentsData.forEach(s => s.status = "");
+  await db.collection("polygonStudents").doc(key).set({ students: window.studentsData });
+  updateStudentsTable(window.studentsData);
+  document.getElementById("attMsg").innerText = "Submitted!";
 }
 
-// Share Attendance to WhatsApp Group
 function shareAttendanceGroup() {
-  const className = document.getElementById("classSelect").value.trim();
-  const stream = document.getElementById("streamSelect").value.trim();
-  const section = document.getElementById("sectionSelect").value.trim();
-  if (!(className && stream && section)) {
-    alert("Please select Class, Stream and Section before sharing.");
-    return;
-  }
-  // Prefer current attendance if marked, else last submitted
-  let students =
-    (window.studentsData && window.studentsData.some(s=>s.status==="Present"||s.status==="Absent"))
-      ? window.studentsData
-      : lastAttendanceList;
-
-  let msg = `Attendance for Class ${className}, ${stream}, Section ${section}\n\nPresent:\n`;
-  (students||[]).filter(s => s.status === "Present").forEach(s => {
-    msg += `- ${s.name} (Roll ${s.roll})\n`;
-  });
+  const key = getKey();
+  let msg = `Attendance: ${key}\n\nPresent:\n`;
+  lastAttendanceList.filter(s => s.status === "Present").forEach(s => msg += `- ${s.name}\n`);
   msg += `\nAbsent:\n`;
-  (students||[]).filter(s => s.status === "Absent").forEach(s => {
-    msg += `- ${s.name} (Roll ${s.roll})\n`;
-  });
-
-  const encodedMsg = encodeURIComponent(msg);
-  const wpUrl = `https://wa.me/?text=${encodedMsg}`;
-  window.open(wpUrl, "_blank");
+  lastAttendanceList.filter(s => s.status === "Absent").forEach(s => msg += `- ${s.name}\n`);
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
 }
 
-window.onload = function () {
-  showLogin();
-  updateAddButtonState();
-};
+window.onload = () => { document.getElementById("login").style.display = "block"; };
 </script>
 </body>
 </html>
